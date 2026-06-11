@@ -71,6 +71,7 @@ def webhook():
         user_sessions[sender] = {
             "state": "AWAITING_GENDER",
             "gender": None,
+            "prefix": None,
             "temp_names": []
         }
         
@@ -97,68 +98,72 @@ def webhook():
     if state == "AWAITING_GENDER":
         if message == "1":
             session["gender"] = "male"
-            session["state"] = "AWAITING_LETTER"
+            session["state"] = "AWAITING_PREFIX"
             reply_text = (
                 "♤ *DESTINY CHOSEN: MALE* ♤\n\n"
                 f"{get_fancy_divider()}\n\n"
-                "◈ Step 2: The Magic Letter ◈\n"
-                "◈ Hatua ya 2: Herufi ya Bahati ◈\n\n"
-                "Please enter the *first letter* of the name you seek.\n"
-                "Weka herufi ya kwanza ya jina unalotafuta.\n\n"
-                "✨ *Example: F*"
+                "◈ Step 2: The Magic Letters ◈\n"
+                "◈ Hatua ya 2: Herufi za Bahati ◈\n\n"
+                "Please enter the *first TWO letters* of the name you seek.\n"
+                "Weka *herufi MBILI za kwanza* za jina unalotafuta.\n\n"
+                "✨ *Example: FA*"
             )
         elif message == "2":
             session["gender"] = "female"
-            session["state"] = "AWAITING_LETTER"
+            session["state"] = "AWAITING_PREFIX"
             reply_text = (
                 "♡ *DESTINY CHOSEN: FEMALE* ♡\n\n"
                 f"{get_fancy_divider()}\n\n"
-                "◈ Step 2: The Magic Letter ◈\n"
-                "◈ Hatua ya 2: Herufi ya Bahati ◈\n\n"
-                "Please enter the *first letter* of the name you seek.\n"
-                "Weka herufi ya kwanza ya jina unalotafuta.\n\n"
-                "✨ *Example: G*"
+                "◈ Step 2: The Magic Letters ◈\n"
+                "◈ Hatua ya 2: Herufi za Bahati ◈\n\n"
+                "Please enter the *first TWO letters* of the name you seek.\n"
+                "Weka *herufi MBILI za kwanza* za jina unalotafuta.\n\n"
+                "✨ *Example: GI*"
             )
         else:
             reply_text = "❌ *Invalid Choice!* Please reply with *1* or *2*."
         return send_reply(reply_text)
 
-    # STEP 2: Single Letter
-    elif state == "AWAITING_LETTER":
-        letters = re.findall(r'[a-zA-Z]', message)
-        if len(letters) >= 1:
-            l1 = letters[0].upper()
-            gender = session["gender"]
-            
-            # Filter from 210,000 unique names
-            matches = [n for n in names_db[gender] if n.startswith(l1)]
-            
-            # Randomize and limit to 10 for more options
-            if len(matches) > 10:
-                matches = random.sample(matches, 10)
-                
-            if not matches:
-                reply_text = f"∆ *No match found for '{l1}'.* Try a different letter! ∆"
+    # STEP 2: Two Letters Prefix
+    elif state == "AWAITING_PREFIX" or (state == "AWAITING_SELECTION" and msg_upper == "MORE"):
+        if state == "AWAITING_PREFIX":
+            letters = re.findall(r'[a-zA-Z]', message)
+            if len(letters) >= 2:
+                prefix = (letters[0] + letters[1]).capitalize()
+                session["prefix"] = prefix
             else:
-                session["temp_names"] = matches
-                session["state"] = "AWAITING_SELECTION"
-                
-                list_str = ""
-                for idx, name in enumerate(matches, start=1):
-                    # Use fancy numbers
-                    list_str += f"{idx}️⃣ ⊛ *{name}*\n"
-                    
-                reply_text = (
-                    f"{get_fancy_header('THE REVELATION')}\n\n"
-                    "💎 *Your Sacred Options:* 💎\n\n"
-                    f"{list_str}\n"
-                    f"{get_fancy_divider()}\n"
-                    "👉 *CLAIM YOUR DESTINY:*\n"
-                    "Reply with the *Number* of your favorite name.\n"
-                    "✨ *Example: 1*"
-                )
+                return send_reply("⚠️ *Format Error!* Please type exactly two letters (e.g., `FA`).")
+        
+        prefix = session["prefix"]
+        gender = session["gender"]
+        
+        # Filter matches
+        matches = [n for n in names_db[gender] if n.startswith(prefix)]
+        
+        if not matches:
+            reply_text = f"∆ *No match found for '{prefix}'.* Try different letters! ∆"
+            session["state"] = "AWAITING_PREFIX"
         else:
-            reply_text = "⚠️ *Format Error!* Please type one letter (e.g., `F`)."
+            # Randomly pick 30
+            sample_size = min(30, len(matches))
+            selected_names = random.sample(matches, sample_size)
+            session["temp_names"] = selected_names
+            session["state"] = "AWAITING_SELECTION"
+            
+            list_str = ""
+            for idx, name in enumerate(selected_names, start=1):
+                list_str += f"{idx}. *{name}*\n"
+                
+            reply_text = (
+                f"{get_fancy_header('THE REVELATION')}\n\n"
+                f"💎 *Top 30 Names for '{prefix}':* 💎\n\n"
+                f"{list_str}\n"
+                f"{get_fancy_divider()}\n"
+                "👉 *HOW TO CHOOSE:*\n"
+                "1️⃣ Reply with the *Number* of your favorite name.\n"
+                "2️⃣ Reply with *MORE* to see 30 different names!\n"
+                "✨ *Example: 7*"
+            )
         return send_reply(reply_text)
 
     # STEP 3: Selection
@@ -170,7 +175,6 @@ def webhook():
             
             if 0 <= idx < len(names):
                 chosen_name = names[idx]
-                
                 reply_text = (
                     f"{get_fancy_header('DESTINY COMPLETE')}\n\n"
                     "🏆 *YOUR UNIQUE NAME IS:* 🏆\n\n"
@@ -183,7 +187,7 @@ def webhook():
             else:
                 reply_text = f"❌ *Invalid Selection!* Please pick a number between 1 and {len(names)}."
         else:
-            reply_text = "⚠️ *Invalid Format!* Please reply with a number (e.g., `1`)."
+            reply_text = "⚠️ *Invalid Format!* Reply with a *Number* or type *MORE*."
         return send_reply(reply_text)
 
     return send_reply("")
