@@ -2,6 +2,7 @@ import os
 import re
 import json
 import random
+import difflib
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
@@ -9,6 +10,8 @@ app = Flask(__name__)
 # --- CONFIGURATION ---
 MALE_NAMES_FILE = "male_names_200k.json"
 FEMALE_NAMES_FILE = "female_names_200k.json"
+WATERMARK = "©FAHAD TECH ® - NAME BOT™"
+CHANNEL_URL = "https://whatsapp.com/channel/0029Vb7jjtZLo4hnTZRnqW1n"
 
 names_db = {
     "male": [],
@@ -38,6 +41,9 @@ def get_fancy_header(title):
 
 def get_fancy_divider():
     return "┈┉┅━❀🍃🌸🍃❀━┅┉┈"
+
+def get_watermark():
+    return f"\n\n{get_fancy_divider()}\n{WATERMARK}"
 
 # Keeps track of each user's progress
 user_sessions = {}
@@ -71,7 +77,7 @@ def webhook():
         user_sessions[sender] = {
             "state": "AWAITING_GENDER",
             "gender": None,
-            "prefix": None,
+            "search_query": None,
             "temp_names": []
         }
         
@@ -79,12 +85,11 @@ def webhook():
             f"{get_fancy_header('NAME DESTINY BOT')}\n\n"
             "Welcome to the most advanced Name Oracle! 🔮\n"
             "Karibu kwenye mtabiri mkuu wa majina! 🌌\n\n"
-            f"{get_fancy_divider()}\n\n"
             "◈ Step 1: Reveal Your Path ◈\n"
             "◈ Hatua ya 1: Chagua Jinsia ◈\n\n"
             "1️⃣ ♤ *MALE* (Kiume)\n"
-            "2️⃣ ♡ *FEMALE* (Kike)\n\n"
-            "👉 *Reply with 1 or 2 to begin...*"
+            "2️⃣ ♡ *FEMALE* (Kike)\n"
+            f"{get_watermark()}"
         )
         return send_reply(reply_text)
 
@@ -98,55 +103,65 @@ def webhook():
     if state == "AWAITING_GENDER":
         if message == "1":
             session["gender"] = "male"
-            session["state"] = "AWAITING_PREFIX"
+            session["state"] = "AWAITING_SEARCH"
             reply_text = (
                 "♤ *DESTINY CHOSEN: MALE* ♤\n\n"
-                f"{get_fancy_divider()}\n\n"
-                "◈ Step 2: The Magic Letters ◈\n"
-                "◈ Hatua ya 2: Herufi za Bahati ◈\n\n"
-                "Please enter the *first TWO letters* of the name you seek.\n"
-                "Weka *herufi MBILI za kwanza* za jina unalotafuta.\n\n"
-                "✨ *Example: FA*"
+                "◈ Step 2: Search Your Name ◈\n"
+                "◈ Hatua ya 2: Tafuta Jina Lako ◈\n\n"
+                "👉 Enter at least *3 letters* or a *Full Name*.\n"
+                "👉 Weka herufi *3 za kwanza* au *Jina Kamili*.\n\n"
+                "✨ *Example: FAH or FAHAD*"
+                f"{get_watermark()}"
             )
         elif message == "2":
             session["gender"] = "female"
-            session["state"] = "AWAITING_PREFIX"
+            session["state"] = "AWAITING_SEARCH"
             reply_text = (
                 "♡ *DESTINY CHOSEN: FEMALE* ♡\n\n"
-                f"{get_fancy_divider()}\n\n"
-                "◈ Step 2: The Magic Letters ◈\n"
-                "◈ Hatua ya 2: Herufi za Bahati ◈\n\n"
-                "Please enter the *first TWO letters* of the name you seek.\n"
-                "Weka *herufi MBILI za kwanza* za jina unalotafuta.\n\n"
-                "✨ *Example: GI*"
+                "◈ Step 2: Search Your Name ◈\n"
+                "◈ Hatua ya 2: Tafuta Jina Lako ◈\n\n"
+                "👉 Enter at least *3 letters* or a *Full Name*.\n"
+                "👉 Weka herufi *3 za kwanza* au *Jina Kamili*.\n\n"
+                "✨ *Example: GIA or GIANNA*"
+                f"{get_watermark()}"
             )
         else:
-            reply_text = "❌ *Invalid Choice!* Please reply with *1* or *2*."
+            reply_text = f"❌ *Invalid Choice!* Reply with *1* or *2*.{get_watermark()}"
         return send_reply(reply_text)
 
-    # STEP 2: Two Letters Prefix
-    elif state == "AWAITING_PREFIX" or (state == "AWAITING_SELECTION" and msg_upper == "MORE"):
-        if state == "AWAITING_PREFIX":
-            letters = re.findall(r'[a-zA-Z]', message)
-            if len(letters) >= 2:
-                prefix = (letters[0] + letters[1]).capitalize()
-                session["prefix"] = prefix
-            else:
-                return send_reply("⚠️ *Format Error!* Please type exactly two letters (e.g., `FA`).")
+    # STEP 2: Advanced Search
+    elif state == "AWAITING_SEARCH" or (state == "AWAITING_SELECTION" and msg_upper == "MORE"):
+        if state == "AWAITING_SEARCH":
+            search_input = message.strip()
+            if len(search_input) < 3:
+                return send_reply(f"⚠️ *Search too short!* Please enter at least 3 letters.{get_watermark()}")
+            session["search_query"] = search_input
         
-        prefix = session["prefix"]
+        search_query = session["search_query"]
         gender = session["gender"]
+        all_names = names_db[gender]
         
-        # Filter matches
-        matches = [n for n in names_db[gender] if n.startswith(prefix)]
+        # 1. Exact or Prefix Match
+        matches = [n for n in all_names if n.upper().startswith(search_query.upper())]
+        
+        # 2. Fuzzy Match if no direct matches
+        if not matches:
+            matches = difflib.get_close_matches(search_query.capitalize(), all_names, n=30, cutoff=0.6)
+            is_fuzzy = True
+        else:
+            is_fuzzy = False
         
         if not matches:
-            reply_text = f"∆ *No match found for '{prefix}'.* Try different letters! ∆"
-            session["state"] = "AWAITING_PREFIX"
+            reply_text = f"∆ *No match found for '{search_query}'.* Try different letters! ∆{get_watermark()}"
+            session["state"] = "AWAITING_SEARCH"
         else:
-            # Randomly pick 30
+            # Pick 30
             sample_size = min(30, len(matches))
-            selected_names = random.sample(matches, sample_size)
+            if is_fuzzy:
+                selected_names = matches[:sample_size]
+            else:
+                selected_names = random.sample(matches, sample_size)
+                
             session["temp_names"] = selected_names
             session["state"] = "AWAITING_SELECTION"
             
@@ -154,15 +169,15 @@ def webhook():
             for idx, name in enumerate(selected_names, start=1):
                 list_str += f"{idx}. *{name}*\n"
                 
+            header_text = "Close matches found:" if is_fuzzy else f"Top 30 Names for '{search_query}':"
             reply_text = (
                 f"{get_fancy_header('THE REVELATION')}\n\n"
-                f"💎 *Top 30 Names for '{prefix}':* 💎\n\n"
-                f"{list_str}\n"
-                f"{get_fancy_divider()}\n"
+                f"💎 *{header_text}* 💎\n\n"
+                f"{list_str}\n\n"
                 "👉 *HOW TO CHOOSE:*\n"
                 "1️⃣ Reply with the *Number* of your favorite name.\n"
-                "2️⃣ Reply with *MORE* to see 30 different names!\n"
-                "✨ *Example: 7*"
+                "2️⃣ Reply with *MORE* to see different names!\n"
+                f"{get_watermark()}"
             )
         return send_reply(reply_text)
 
@@ -179,15 +194,17 @@ def webhook():
                     f"{get_fancy_header('DESTINY COMPLETE')}\n\n"
                     "🏆 *YOUR UNIQUE NAME IS:* 🏆\n\n"
                     f"¶∆π `{chosen_name}` π∆¶\n\n"
-                    f"{get_fancy_divider()}\n"
                     "○ *Tap and hold the name above to copy it!*\n"
-                    "● Type *MENU* to start again! ✨"
+                    "● Type *MENU* to start again! ✨\n\n"
+                    "🔗 *VIEW CHANNEL:*\n"
+                    f"{CHANNEL_URL}"
+                    f"{get_watermark()}"
                 )
                 session["state"] = "IDLE"
             else:
-                reply_text = f"❌ *Invalid Selection!* Please pick a number between 1 and {len(names)}."
+                reply_text = f"❌ *Invalid Selection!* Pick a number between 1 and {len(names)}.{get_watermark()}"
         else:
-            reply_text = "⚠️ *Invalid Format!* Reply with a *Number* or type *MORE*."
+            reply_text = f"⚠️ *Invalid Format!* Reply with a *Number* or type *MORE*.{get_watermark()}"
         return send_reply(reply_text)
 
     return send_reply("")
