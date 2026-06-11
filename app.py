@@ -7,7 +7,6 @@ from flask import Flask, request, jsonify
 app = Flask(__name__)
 
 # --- CONFIGURATION ---
-# Now using local JSON files generated previously
 MALE_NAMES_FILE = "male_names_200k.json"
 FEMALE_NAMES_FILE = "female_names_200k.json"
 
@@ -19,34 +18,21 @@ names_db = {
 def load_names():
     """Loads male and female names from local JSON files."""
     global names_db
-    
-    # Load Male Names
     try:
         if os.path.exists(MALE_NAMES_FILE):
             with open(MALE_NAMES_FILE, "r") as f:
                 data = json.load(f)
                 names_db["male"] = data.get("male_names", [])
             print(f"✅ Loaded {len(names_db['male'])} male names.")
-        else:
-            print(f"❌ {MALE_NAMES_FILE} not found!")
-    except Exception as e:
-        print(f"❌ Error loading male names: {e}")
-
-    # Load Female Names
-    try:
         if os.path.exists(FEMALE_NAMES_FILE):
             with open(FEMALE_NAMES_FILE, "r") as f:
                 data = json.load(f)
                 names_db["female"] = data.get("female_names", [])
             print(f"✅ Loaded {len(names_db['female'])} female names.")
-        else:
-            print(f"❌ {FEMALE_NAMES_FILE} not found!")
     except Exception as e:
-        print(f"❌ Error loading female names: {e}")
+        print(f"❌ Error loading names: {e}")
 
 # --- FANCY UI ELEMENTS ---
-SYMBOLS = "©®™¶∆π■♤♡◇♧$○●☆¤°•"
-
 def get_fancy_header(title):
     return f"☆¤°•.¸¸.•°°•.¸¸.•°¤☆\n✨ {title} ✨\n☆¤°•.¸¸.•°°•.¸¸.•°¤☆"
 
@@ -59,7 +45,6 @@ user_sessions = {}
 @app.route('/webhook', methods=['POST'])
 def webhook():
     global user_sessions
-    
     data = request.json or {}
     query_data = data.get('query', {})
     
@@ -86,8 +71,7 @@ def webhook():
         user_sessions[sender] = {
             "state": "AWAITING_GENDER",
             "gender": None,
-            "temp_first_names": [],
-            "temp_second_names": []
+            "temp_names": []
         }
         
         reply_text = (
@@ -113,120 +97,93 @@ def webhook():
     if state == "AWAITING_GENDER":
         if message == "1":
             session["gender"] = "male"
-            session["state"] = "AWAITING_LETTERS"
+            session["state"] = "AWAITING_LETTER"
             reply_text = (
                 "♤ *DESTINY CHOSEN: MALE* ♤\n\n"
                 f"{get_fancy_divider()}\n\n"
-                "◈ Step 2: The Magic Letters ◈\n"
-                "◈ Hatua ya 2: Herufi za Bahati ◈\n\n"
-                "Please enter the *first letter* of your first name and *second name* separated by a space.\n"
-                "Weka herufi ya kwanza ya jina la kwanza na la pili kwa nafasi kati yao.\n\n"
-                "✨ *Example: A M*"
+                "◈ Step 2: The Magic Letter ◈\n"
+                "◈ Hatua ya 2: Herufi ya Bahati ◈\n\n"
+                "Please enter the *first letter* of the name you seek.\n"
+                "Weka herufi ya kwanza ya jina unalotafuta.\n\n"
+                "✨ *Example: F*"
             )
         elif message == "2":
             session["gender"] = "female"
-            session["state"] = "AWAITING_LETTERS"
+            session["state"] = "AWAITING_LETTER"
             reply_text = (
                 "♡ *DESTINY CHOSEN: FEMALE* ♡\n\n"
                 f"{get_fancy_divider()}\n\n"
-                "◈ Step 2: The Magic Letters ◈\n"
-                "◈ Hatua ya 2: Herufi za Bahati ◈\n\n"
-                "Please enter the *first letter* of your first name and *second name* separated by a space.\n"
-                "Weka herufi ya kwanza ya jina la kwanza na la pili kwa nafasi kati yao.\n\n"
-                "✨ *Example: V G*"
+                "◈ Step 2: The Magic Letter ◈\n"
+                "◈ Hatua ya 2: Herufi ya Bahati ◈\n\n"
+                "Please enter the *first letter* of the name you seek.\n"
+                "Weka herufi ya kwanza ya jina unalotafuta.\n\n"
+                "✨ *Example: G*"
             )
         else:
             reply_text = "❌ *Invalid Choice!* Please reply with *1* or *2*."
         return send_reply(reply_text)
 
-    # STEP 2: Letters
-    elif state == "AWAITING_LETTERS":
+    # STEP 2: Single Letter
+    elif state == "AWAITING_LETTER":
         letters = re.findall(r'[a-zA-Z]', message)
-        if len(letters) >= 2:
+        if len(letters) >= 1:
             l1 = letters[0].upper()
-            l2 = letters[1].upper()
             gender = session["gender"]
             
             # Filter from 210,000 unique names
-            first_names_match = [n for n in names_db[gender] if n.startswith(l1)]
-            second_names_match = [n for n in names_db[gender] if n.startswith(l2)]
+            matches = [n for n in names_db[gender] if n.startswith(l1)]
             
-            # Randomize and limit to 5
-            if len(first_names_match) > 5:
-                first_names_match = random.sample(first_names_match, 5)
-            if len(second_names_match) > 5:
-                second_names_match = random.sample(second_names_match, 5)
+            # Randomize and limit to 10 for more options
+            if len(matches) > 10:
+                matches = random.sample(matches, 10)
                 
-            if not first_names_match or not second_names_match:
-                reply_text = f"∆ *No match found for {l1} & {l2}.* Try different letters! ∆"
+            if not matches:
+                reply_text = f"∆ *No match found for '{l1}'.* Try a different letter! ∆"
             else:
-                session["temp_first_names"] = first_names_match
-                session["temp_second_names"] = second_names_match
+                session["temp_names"] = matches
                 session["state"] = "AWAITING_SELECTION"
                 
-                first_list_str = ""
-                for idx, name in enumerate(first_names_match, start=1):
-                    first_list_str += f"{idx}️⃣ ⊛ *{name}*\n"
-                    
-                emoji_letters = ["🇦", "🇧", "🇨", "🇩", "🇪"]
-                second_list_str = ""
-                for idx, name in enumerate(second_names_match):
-                    second_list_str += f"{emoji_letters[idx]} ⊛ *{name}*\n"
+                list_str = ""
+                for idx, name in enumerate(matches, start=1):
+                    # Use fancy numbers
+                    list_str += f"{idx}️⃣ ⊛ *{name}*\n"
                     
                 reply_text = (
                     f"{get_fancy_header('THE REVELATION')}\n\n"
                     "💎 *Your Sacred Options:* 💎\n\n"
-                    "■ *First Names:*\n"
-                    f"{first_list_str}\n"
-                    "■ *Second Names:*\n"
-                    f"{second_list_str}\n"
+                    f"{list_str}\n"
                     f"{get_fancy_divider()}\n"
-                    "👉 *COMBINE YOUR DESTINY:*\n"
-                    "Reply with a *Number* and *Letter*.\n"
-                    "✨ *Example: 1 A*"
+                    "👉 *CLAIM YOUR DESTINY:*\n"
+                    "Reply with the *Number* of your favorite name.\n"
+                    "✨ *Example: 1*"
                 )
         else:
-            reply_text = "⚠️ *Format Error!* Please type two letters (e.g., `A B`)."
+            reply_text = "⚠️ *Format Error!* Please type one letter (e.g., `F`)."
         return send_reply(reply_text)
 
     # STEP 3: Selection
     elif state == "AWAITING_SELECTION":
-        clean_msg = re.sub(r'[^a-zA-Z0-9]', '', message).upper()
-        match = re.match(r'^([1-5])([A-E])$', clean_msg)
-        if not match:
-            match = re.match(r'^([A-E])([1-5])$', clean_msg)
-            if match:
-                letter_part, digit_part = match.groups()
-            else:
-                digit_part, letter_part = None, None
-        else:
-            digit_part, letter_part = match.groups()
+        digit_match = re.search(r'\d+', message)
+        if digit_match:
+            idx = int(digit_match.group()) - 1
+            names = session["temp_names"]
             
-        if digit_part and letter_part:
-            first_idx = int(digit_part) - 1
-            second_idx = ord(letter_part) - ord('A')
-            
-            first_names = session["temp_first_names"]
-            second_names = session["temp_second_names"]
-            
-            if first_idx < len(first_names) and second_idx < len(second_names):
-                chosen_first = first_names[first_idx]
-                chosen_second = second_names[second_idx]
-                full_name = f"{chosen_first} {chosen_second}"
+            if 0 <= idx < len(names):
+                chosen_name = names[idx]
                 
                 reply_text = (
                     f"{get_fancy_header('DESTINY COMPLETE')}\n\n"
                     "🏆 *YOUR UNIQUE NAME IS:* 🏆\n\n"
-                    f"¶∆π `{full_name}` π∆¶\n\n"
+                    f"¶∆π `{chosen_name}` π∆¶\n\n"
                     f"{get_fancy_divider()}\n"
                     "○ *Tap and hold the name above to copy it!*\n"
                     "● Type *MENU* to start again! ✨"
                 )
                 session["state"] = "IDLE"
             else:
-                reply_text = "❌ *Selection out of range!*"
+                reply_text = f"❌ *Invalid Selection!* Please pick a number between 1 and {len(names)}."
         else:
-            reply_text = "⚠️ *Invalid Format!* Example: `1 A`."
+            reply_text = "⚠️ *Invalid Format!* Please reply with a number (e.g., `1`)."
         return send_reply(reply_text)
 
     return send_reply("")
