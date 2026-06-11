@@ -1,83 +1,65 @@
 import os
 import re
-import requests
+import json
+import random
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
 # --- CONFIGURATION ---
-# The server will automatically transform these standard GitHub links to their "raw" counterparts
-MALE_NAMES_URL = "https://github.com/gamesiteonline/Telebot.games/blob/main/male_names"
-FEMALE_NAMES_URL = "https://github.com/gamesiteonline/Telebot.games/blob/main/female_names"
-
-# Default fallback names in case of internet outage or GitHub access issues
-FALLBACK_MALE = [
-    "Aaron", "Ally", "Abdul", "Amos", "Brian", "Bakari", "Benjamin", "Charles", 
-    "David", "Daniel", "Emmanuel", "Eric", "Frank", "George", "Hussein", "Isaac", 
-    "John", "Joseph", "James", "Kevin", "Lucas", "Michael", "Moses", "Nelson", 
-    "Oscar", "Peter", "Richard", "Samuel", "Thomas", "Victor", "William", "Yusuf", "Zacharia"
-]
-
-FALLBACK_FEMALE = [
-    "Amina", "Asha", "Alice", "Beatrice", "Brenda", "Catherine", "Diana", "Dorice", 
-    "Elizabeth", "Esther", "Fiona", "Grace", "Gloria", "Halima", "Irene", "Jackline", 
-    "Joyce", "Karen", "Lucy", "Mary", "Maryam", "Nancy", "Neema", "Olive", "Patricia", 
-    "Rachel", "Rose", "Sarah", "Sophia", "Theresa", "Valerie", "Winfrida", "Yvonne", "Zainab"
-]
+# Now using local JSON files generated previously
+MALE_NAMES_FILE = "male_names_200k.json"
+FEMALE_NAMES_FILE = "female_names_200k.json"
 
 names_db = {
     "male": [],
     "female": []
 }
 
-def get_raw_url(url):
-    """Converts a standard browser GitHub URL to a raw URL if needed."""
-    if "github.com" in url and "/blob/" in url:
-        return url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/")
-    return url
-
 def load_names():
-    """Fetches male and female names lists from your GitHub repository."""
+    """Loads male and female names from local JSON files."""
     global names_db
     
-    # Fetch Male Names
+    # Load Male Names
     try:
-        raw_male_url = get_raw_url(MALE_NAMES_URL)
-        r_male = requests.get(raw_male_url, timeout=10)
-        if r_male.status_code == 200:
-            names = [line.strip().capitalize() for line in r_male.text.split('\n') if line.strip()]
-            names_db["male"] = sorted(list(set(names)))
-            print(f"Loaded {len(names_db['male'])} male names from GitHub.")
+        if os.path.exists(MALE_NAMES_FILE):
+            with open(MALE_NAMES_FILE, "r") as f:
+                data = json.load(f)
+                names_db["male"] = data.get("male_names", [])
+            print(f"✅ Loaded {len(names_db['male'])} male names.")
         else:
-            names_db["male"] = FALLBACK_MALE
-            print("Could not fetch male names from GitHub. Loaded fallback lists.")
+            print(f"❌ {MALE_NAMES_FILE} not found!")
     except Exception as e:
-        names_db["male"] = FALLBACK_MALE
-        print(f"Error fetching male names: {e}. Loaded fallback lists.")
+        print(f"❌ Error loading male names: {e}")
 
-    # Fetch Female Names
+    # Load Female Names
     try:
-        raw_female_url = get_raw_url(FEMALE_NAMES_URL)
-        r_female = requests.get(raw_female_url, timeout=10)
-        if r_female.status_code == 200:
-            names = [line.strip().capitalize() for line in r_female.text.split('\n') if line.strip()]
-            names_db["female"] = sorted(list(set(names)))
-            print(f"Loaded {len(names_db['female'])} female names from GitHub.")
+        if os.path.exists(FEMALE_NAMES_FILE):
+            with open(FEMALE_NAMES_FILE, "r") as f:
+                data = json.load(f)
+                names_db["female"] = data.get("female_names", [])
+            print(f"✅ Loaded {len(names_db['female'])} female names.")
         else:
-            names_db["female"] = FALLBACK_FEMALE
-            print("Could not fetch female names from GitHub. Loaded fallback lists.")
+            print(f"❌ {FEMALE_NAMES_FILE} not found!")
     except Exception as e:
-        names_db["female"] = FALLBACK_FEMALE
-        print(f"Error fetching female names: {e}. Loaded fallback lists.")
+        print(f"❌ Error loading female names: {e}")
 
-# Keeps track of each user's progress through the name selection game
+# --- FANCY UI ELEMENTS ---
+SYMBOLS = "©®™¶∆π■♤♡◇♧$○●☆¤°•"
+
+def get_fancy_header(title):
+    return f"☆¤°•.¸¸.•°°•.¸¸.•°¤☆\n✨ {title} ✨\n☆¤°•.¸¸.•°°•.¸¸.•°¤☆"
+
+def get_fancy_divider():
+    return "┈┉┅━❀🍃🌸🍃❀━┅┉┈"
+
+# Keeps track of each user's progress
 user_sessions = {}
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
     global user_sessions
     
-    # Process incoming data from AutoResponder for WhatsApp
     data = request.json or {}
     query_data = data.get('query', {})
     
@@ -93,16 +75,12 @@ def webhook():
 
     msg_upper = message.upper()
     
-    # Triggers that initialize or restart the game
-    is_trigger = ("WANT TO CHAKE MY NAME" in msg_upper or 
-                  "WANT TO CHECK MY NAME" in msg_upper or
-                  "NIANGALIE JINA" in msg_upper or 
-                  "TAFUTA JINA" in msg_upper or 
-                  "NATAKA JINA" in msg_upper)
-
-    # Force reset if user types MENU or CANCEL
-    if msg_upper in ["MENU", "CANCEL", "RESET"]:
-        is_trigger = True
+    # Triggers
+    is_trigger = any(x in msg_upper for x in [
+        "WANT TO CHAKE MY NAME", "WANT TO CHECK MY NAME", 
+        "NIANGALIE JINA", "TAFUTA JINA", "NATAKA JINA",
+        "MENU", "CANCEL", "RESET", "START"
+    ])
 
     if is_trigger:
         user_sessions[sender] = {
@@ -111,53 +89,57 @@ def webhook():
             "temp_first_names": [],
             "temp_second_names": []
         }
+        
         reply_text = (
-            "🎮 *GAME: NAME SEARCH / CHEZO LA MAJINA* 🎮\n"
-            "Welcome! Let's find your lucky name combo.\n"
-            "Karibu! Wacha tutafute jina lako la bahati.\n\n"
-            "Step 1: Choose Gender / Chagua Jinsia:\n"
-            "👉 Type *1* for *MALE* (Kiume)\n"
-            "👉 Type *2* for *FEMALE* (Kike)"
+            f"{get_fancy_header('NAME DESTINY BOT')}\n\n"
+            "Welcome to the most advanced Name Oracle! 🔮\n"
+            "Karibu kwenye mtabiri mkuu wa majina! 🌌\n\n"
+            f"{get_fancy_divider()}\n\n"
+            "◈ Step 1: Reveal Your Path ◈\n"
+            "◈ Hatua ya 1: Chagua Jinsia ◈\n\n"
+            "1️⃣ ♤ *MALE* (Kiume)\n"
+            "2️⃣ ♡ *FEMALE* (Kike)\n\n"
+            "👉 *Reply with 1 or 2 to begin...*"
         )
         return send_reply(reply_text)
 
-    # If the user doesn't have an ongoing game session, we ignore other text
     if sender not in user_sessions:
         return send_reply("")
 
     session = user_sessions[sender]
     state = session.get("state")
 
-    # STEP 1: Process gender selection
+    # STEP 1: Gender
     if state == "AWAITING_GENDER":
         if message == "1":
             session["gender"] = "male"
             session["state"] = "AWAITING_LETTERS"
             reply_text = (
-                "🧑 Chosen: *MALE* (Kiume)\n\n"
-                "Step 2: Enter starting letters / Weka herufi za mwanzo.\n"
-                "👉 Please reply with the *first letter of your first name* and the *first letter of your second name* separated by a space.\n\n"
-                "*(Mfano: Kama majina yako yanapaswa kuanza na A na M, andika: `A M`)*"
+                "♤ *DESTINY CHOSEN: MALE* ♤\n\n"
+                f"{get_fancy_divider()}\n\n"
+                "◈ Step 2: The Magic Letters ◈\n"
+                "◈ Hatua ya 2: Herufi za Bahati ◈\n\n"
+                "Please enter the *first letter* of your first name and *second name* separated by a space.\n"
+                "Weka herufi ya kwanza ya jina la kwanza na la pili kwa nafasi kati yao.\n\n"
+                "✨ *Example: A M*"
             )
         elif message == "2":
             session["gender"] = "female"
             session["state"] = "AWAITING_LETTERS"
             reply_text = (
-                "👩 Chosen: *FEMALE* (Kike)\n\n"
-                "Step 2: Enter starting letters / Weka herufi za mwanzo.\n"
-                "👉 Please reply with the *first letter of your first name* and the *first letter of your second name* separated by a space.\n\n"
-                "*(Mfano: Kama majina yako yanapaswa kuanza na A na M, andika: `A M`)*"
+                "♡ *DESTINY CHOSEN: FEMALE* ♡\n\n"
+                f"{get_fancy_divider()}\n\n"
+                "◈ Step 2: The Magic Letters ◈\n"
+                "◈ Hatua ya 2: Herufi za Bahati ◈\n\n"
+                "Please enter the *first letter* of your first name and *second name* separated by a space.\n"
+                "Weka herufi ya kwanza ya jina la kwanza na la pili kwa nafasi kati yao.\n\n"
+                "✨ *Example: V G*"
             )
         else:
-            reply_text = (
-                "⚠️ Invalid Choice! / Chaguo Sio Sahihi!\n\n"
-                "Please reply with:\n"
-                "👉 *1* for MALE (Kiume)\n"
-                "👉 *2* for FEMALE (Kike)"
-            )
+            reply_text = "❌ *Invalid Choice!* Please reply with *1* or *2*."
         return send_reply(reply_text)
 
-    # STEP 2: Process starting letters
+    # STEP 2: Letters
     elif state == "AWAITING_LETTERS":
         letters = re.findall(r'[a-zA-Z]', message)
         if len(letters) >= 2:
@@ -165,61 +147,51 @@ def webhook():
             l2 = letters[1].upper()
             gender = session["gender"]
             
-            # Filter from lists
+            # Filter from 210,000 unique names
             first_names_match = [n for n in names_db[gender] if n.startswith(l1)]
             second_names_match = [n for n in names_db[gender] if n.startswith(l2)]
             
-            # Keep unique and limit to a maximum of 5 to avoid long messages
-            first_names_match = sorted(list(set(first_names_match)))[:5]
-            second_names_match = sorted(list(set(second_names_match)))[:5]
-            
+            # Randomize and limit to 5
+            if len(first_names_match) > 5:
+                first_names_match = random.sample(first_names_match, 5)
+            if len(second_names_match) > 5:
+                second_names_match = random.sample(second_names_match, 5)
+                
             if not first_names_match or not second_names_match:
-                reply_text = (
-                    f"❌ Sorry, we couldn't find matching names starting with *'{l1}'* and *'{l2}'*.\n"
-                    f"Samahani, hatujapata majina yanayoanza na *'{l1}'* na *'{l2}'* kwenye kanzidata yetu.\n\n"
-                    "👉 Try another pair of letters (e.g., `S M`):"
-                )
+                reply_text = f"∆ *No match found for {l1} & {l2}.* Try different letters! ∆"
             else:
                 session["temp_first_names"] = first_names_match
                 session["temp_second_names"] = second_names_match
                 session["state"] = "AWAITING_SELECTION"
                 
-                # Build list presentation
                 first_list_str = ""
                 for idx, name in enumerate(first_names_match, start=1):
-                    first_list_str += f"{idx}️⃣ {name}\n"
+                    first_list_str += f"{idx}️⃣ ⊛ *{name}*\n"
                     
                 emoji_letters = ["🇦", "🇧", "🇨", "🇩", "🇪"]
                 second_list_str = ""
                 for idx, name in enumerate(second_names_match):
-                    second_list_str += f"{emoji_letters[idx]} {name}\n"
+                    second_list_str += f"{emoji_letters[idx]} ⊛ *{name}*\n"
                     
                 reply_text = (
-                    "🎉 *MATCHING NAMES FOUND! / MAJINA YAMEPATIKANA!* 🎉\n\n"
-                    "👇 Select your combinations / Chagua mchanganyiko wako:\n\n"
-                    "*First Names (Majina ya Kwanza):*\n"
+                    f"{get_fancy_header('THE REVELATION')}\n\n"
+                    "💎 *Your Sacred Options:* 💎\n\n"
+                    "■ *First Names:*\n"
                     f"{first_list_str}\n"
-                    "*Second Names (Majina ya Pili):*\n"
+                    "■ *Second Names:*\n"
                     f"{second_list_str}\n"
-                    "👉 *HOW TO SELECT / JINSI YA KUCHAGUA:*\n"
-                    "Reply with your favorite combination using its *Number* and *Letter*.\n"
-                    "Jibu kwa kuandika *Namba* na *Herufi* za chaguo lako.\n\n"
-                    "*(Mfano: Type `1 A` to select option 1 and A)*"
+                    f"{get_fancy_divider()}\n"
+                    "👉 *COMBINE YOUR DESTINY:*\n"
+                    "Reply with a *Number* and *Letter*.\n"
+                    "✨ *Example: 1 A*"
                 )
         else:
-            reply_text = (
-                "⚠️ Format Error! / Hitilafu ya Muundo!\n\n"
-                "Please type exactly two letters separated by a space.\n"
-                "Tafadhali andika herufi mbili zilizotengwa kwa nafasi.\n"
-                "👉 Mfano: `A M` au `K S`"
-            )
+            reply_text = "⚠️ *Format Error!* Please type two letters (e.g., `A B`)."
         return send_reply(reply_text)
 
-    # STEP 3: Process combination choice
+    # STEP 3: Selection
     elif state == "AWAITING_SELECTION":
         clean_msg = re.sub(r'[^a-zA-Z0-9]', '', message).upper()
-        
-        # Match combos like '1A', '2B', or 'A2'
         match = re.match(r'^([1-5])([A-E])$', clean_msg)
         if not match:
             match = re.match(r'^([A-E])([1-5])$', clean_msg)
@@ -242,28 +214,19 @@ def webhook():
                 chosen_second = second_names[second_idx]
                 full_name = f"{chosen_first} {chosen_second}"
                 
-                # We enclose the name in backticks.
-                # In WhatsApp, backticks format the text into a monospaced block,
-                # which allows users on mobile to easily select and copy just the name with one tap.
                 reply_text = (
-                    "🏆 *YOUR GENERATED NAME / JINA LAKO:* 🏆\n\n"
-                    f"`{full_name}`\n\n"
-                    "👆 *Tap and hold the boxed name above to copy it instantly!* (Gusa na ushikilie jina lililopo kwenye box hapo juu kulicopy!)\n\n"
-                    "🔄 Type *MENU* to search again! / Andika *MENU* kuanza upya!"
+                    f"{get_fancy_header('DESTINY COMPLETE')}\n\n"
+                    "🏆 *YOUR UNIQUE NAME IS:* 🏆\n\n"
+                    f"¶∆π `{full_name}` π∆¶\n\n"
+                    f"{get_fancy_divider()}\n"
+                    "○ *Tap and hold the name above to copy it!*\n"
+                    "● Type *MENU* to start again! ✨"
                 )
                 session["state"] = "IDLE"
             else:
-                reply_text = (
-                    "⚠️ Selection out of list limits! / Chaguo lako halimo kwenye orodha!\n"
-                    "Please pick a valid number and letter from the lists above.\n"
-                    "👉 Mfano: `1 A`"
-                )
+                reply_text = "❌ *Selection out of range!*"
         else:
-            reply_text = (
-                "⚠️ Invalid Format! / Muundo Sio Sahihi!\n"
-                "Please select a valid combination of number and letter from the lists above.\n"
-                "👉 Mfano: `1 A` au `2 B`"
-            )
+            reply_text = "⚠️ *Invalid Format!* Example: `1 A`."
         return send_reply(reply_text)
 
     return send_reply("")
@@ -271,12 +234,8 @@ def webhook():
 def send_reply(text):
     if not text:
         return jsonify({"replies": []})
-    return jsonify({
-        "replies": [{"message": text}],
-        "reply": text # Dual compatibility for older AutoResponder JSON structures
-    })
+    return jsonify({"replies": [{"message": text}]})
 
 if __name__ == '__main__':
     load_names()
-    # Runs server on port 5000
     app.run(host='0.0.0.0', port=5000)
