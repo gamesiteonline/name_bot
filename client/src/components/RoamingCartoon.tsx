@@ -7,12 +7,12 @@ export function RoamingCartoon() {
   useEffect(() => {
     const move = () => {
       setPosition({
-        x: Math.random() * (window.innerWidth - 100),
-        y: Math.random() * (window.innerHeight - 100),
+        x: Math.random() * (window.innerWidth - 150),
+        y: Math.random() * (window.innerHeight - 150),
       });
     };
 
-    const interval = setInterval(move, 4000);
+    const interval = setInterval(move, 5000);
     move();
 
     return () => clearInterval(interval);
@@ -21,19 +21,20 @@ export function RoamingCartoon() {
   return (
     <motion.div
       animate={{ x: position.x, y: position.y }}
-      transition={{ duration: 4, ease: "easeInOut" }}
-      className="fixed z-40 pointer-events-none select-none text-6xl"
+      transition={{ duration: 5, ease: "easeInOut" }}
+      className="fixed z-40 pointer-events-none select-none w-32 h-32"
       style={{ left: 0, top: 0 }}
     >
-      <motion.div
+      <motion.img
+        src="/assets/robot.webp"
+        alt="Robot Mascot"
+        className="w-full h-full object-contain drop-shadow-2xl"
         animate={{ 
-          rotate: [0, 10, -10, 0],
-          scale: [1, 1.1, 0.9, 1]
+          rotate: [0, 5, -5, 0],
+          y: [0, -10, 0]
         }}
-        transition={{ repeat: Infinity, duration: 2 }}
-      >
-        🤖
-      </motion.div>
+        transition={{ repeat: Infinity, duration: 3 }}
+      />
     </motion.div>
   );
 }
