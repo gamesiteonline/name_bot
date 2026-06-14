@@ -69,52 +69,66 @@ export default function NameWizardSkeuomorphic() {
   };
 
   const themeClasses = gender === 'male' 
-    ? 'from-slate-950 via-blue-950 to-black text-white' 
+    ? 'from-slate-950 via-blue-950 to-black' 
     : gender === 'female'
-    ? 'from-pink-600 via-rose-500 to-pink-700 text-white'
-    : 'from-slate-900 via-slate-800 to-black text-white';
+    ? 'from-pink-900 via-rose-800 to-pink-950'
+    : 'from-slate-950 via-slate-900 to-black';
 
   const cardClasses = gender === 'male'
-    ? 'bg-slate-900/90 border-blue-500/50 shadow-[0_0_50px_rgba(59,130,246,0.3)]'
+    ? 'bg-slate-900/40 backdrop-blur-3xl border-blue-500/30 shadow-[0_0_80px_rgba(59,130,246,0.15)]'
     : gender === 'female'
-    ? 'bg-pink-400/20 backdrop-blur-xl border-white/40 shadow-[0_0_50px_rgba(244,114,182,0.4)]'
-    : 'bg-black/60 backdrop-blur-2xl border-white/10 shadow-2xl';
+    ? 'bg-pink-900/40 backdrop-blur-3xl border-pink-400/30 shadow-[0_0_80px_rgba(244,114,182,0.15)]'
+    : 'bg-white/5 backdrop-blur-3xl border-white/10 shadow-2xl';
 
   return (
-    <div className={`min-h-screen transition-all duration-1000 flex flex-col items-center justify-center p-4 bg-gradient-to-br ${themeClasses} overflow-hidden font-sans`}>
+    <div className={`min-h-screen transition-all duration-1000 flex flex-col items-center justify-center p-4 bg-gradient-to-br ${themeClasses} overflow-hidden text-white font-sans`}>
       
-      {/* Dynamic 3D Floating Elements */}
+      {/* Premium Background Layer */}
+      <div className="absolute inset-0 pointer-events-none">
+        <img src="/assets/tech_bg.png" className="w-full h-full object-cover opacity-30 mix-blend-overlay" alt="" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black opacity-60"></div>
+      </div>
+
+      {/* Floating Physical Assets */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <motion.img 
-          src="/assets/game_items.png" 
-          className="absolute top-10 left-10 w-32 opacity-20"
-          animate={{ y: [0, 20, 0], rotate: [0, 10, 0] }}
-          transition={{ duration: 5, repeat: Infinity }}
+          src="/assets/star_emblem.png" 
+          className="absolute top-[15%] left-[10%] w-40 h-40 opacity-40 blur-[1px]"
+          animate={{ 
+            y: [0, 30, 0],
+            rotate: [0, 10, -10, 0],
+            scale: [1, 1.05, 1]
+          }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.img 
-          src="/assets/game_items.png" 
-          className="absolute bottom-10 right-10 w-40 opacity-20 rotate-180"
-          animate={{ y: [0, -30, 0], rotate: [180, 170, 180] }}
-          transition={{ duration: 7, repeat: Infinity }}
+          src="/assets/robot_mascot.png" 
+          className="absolute bottom-[15%] right-[10%] w-48 h-48 opacity-40 blur-[1px]"
+          animate={{ 
+            y: [0, -40, 0],
+            rotate: [0, -15, 15, 0],
+            scale: [1, 1.1, 1]
+          }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
         />
       </div>
 
-      {/* Header */}
+      {/* Header Section */}
       <motion.div 
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="w-full max-w-2xl text-center mb-10 z-10"
+        className="w-full max-w-2xl text-center mb-12 z-10"
       >
         <div className="relative inline-block">
           <motion.div 
-            animate={{ scale: [1, 1.1, 1], rotate: [0, 2, -2, 0] }}
+            animate={{ scale: [1, 1.02, 1] }}
             transition={{ duration: 4, repeat: Infinity }}
-            className="relative bg-white/5 backdrop-blur-md px-16 py-6 rounded-full border-2 border-white/20"
+            className="relative bg-white/5 backdrop-blur-xl px-20 py-8 rounded-[3rem] border border-white/10 shadow-[0_0_50px_rgba(255,255,255,0.05)]"
           >
-            <h1 className="text-5xl md:text-7xl font-black italic tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-500">
+            <h1 className="text-6xl md:text-8xl font-black italic tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-gray-500">
               FAHAD
             </h1>
-            <div className="absolute -top-2 -right-2 bg-blue-500 text-[10px] font-bold px-2 py-1 rounded-sm">V2.0</div>
+            <p className="text-sm font-bold tracking-[0.8em] text-blue-400/80 mt-2 uppercase">System Elite v2</p>
           </motion.div>
         </div>
       </motion.div>
@@ -124,32 +138,34 @@ export default function NameWizardSkeuomorphic() {
           {step === 'gender' && (
             <motion.div
               key="gender"
-              initial={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 1.1, opacity: 0 }}
-              className={`${cardClasses} rounded-[3rem] p-8 border-2`}
+              exit={{ scale: 1.05, opacity: 0 }}
+              className={`${cardClasses} rounded-[4rem] p-10 border`}
             >
-              <h2 className="text-3xl font-black mb-8 text-center uppercase tracking-tighter">Choose Class</h2>
-              <div className="grid grid-cols-2 gap-6">
+              <h2 className="text-3xl font-black mb-10 text-center uppercase tracking-widest italic">Initialize Class</h2>
+              <div className="grid grid-cols-2 gap-8">
                 <button
                   onClick={() => handleGenderSelect('male')}
-                  className="group relative h-56 bg-gradient-to-br from-blue-600 to-blue-900 rounded-[2rem] shadow-xl hover:scale-105 transition-all border-4 border-blue-400/30 overflow-hidden"
+                  className="group relative h-64 bg-gradient-to-br from-blue-600/20 to-blue-900/40 rounded-[3rem] shadow-2xl hover:scale-105 transition-all border border-blue-500/30 overflow-hidden"
                 >
-                  <motion.img src="/assets/robot_male.webp" className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity" />
-                  <div className="relative h-full flex flex-col items-center justify-end pb-6">
-                    <Shield className="w-10 h-10 mb-2 text-blue-200" />
-                    <span className="text-xl font-black uppercase italic">Commander</span>
+                  <div className="absolute inset-0 bg-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity blur-2xl"></div>
+                  <div className="relative h-full flex flex-col items-center justify-center p-6">
+                    <Shield className="w-16 h-16 mb-4 text-blue-400 group-hover:scale-110 transition-transform" />
+                    <span className="text-2xl font-black uppercase italic tracking-tighter">Commander</span>
+                    <span className="text-[10px] opacity-40 mt-2 uppercase tracking-widest">Strength • Logic</span>
                   </div>
                 </button>
 
                 <button
                   onClick={() => handleGenderSelect('female')}
-                  className="group relative h-56 bg-gradient-to-br from-pink-500 to-rose-700 rounded-[2rem] shadow-xl hover:scale-105 transition-all border-4 border-pink-300/30 overflow-hidden"
+                  className="group relative h-64 bg-gradient-to-br from-pink-600/20 to-rose-900/40 rounded-[3rem] shadow-2xl hover:scale-105 transition-all border border-pink-500/30 overflow-hidden"
                 >
-                  <motion.img src="/assets/heart.png" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 object-contain opacity-40 group-hover:scale-110 transition-transform" />
-                  <div className="relative h-full flex flex-col items-center justify-end pb-6">
-                    <Heart className="w-10 h-10 mb-2 text-pink-100" />
-                    <span className="text-xl font-black uppercase italic">Valkyrie</span>
+                  <div className="absolute inset-0 bg-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity blur-2xl"></div>
+                  <div className="relative h-full flex flex-col items-center justify-center p-6">
+                    <Heart className="w-16 h-16 mb-4 text-pink-400 group-hover:scale-110 transition-transform" />
+                    <span className="text-2xl font-black uppercase italic tracking-tighter">Valkyrie</span>
+                    <span className="text-[10px] opacity-40 mt-2 uppercase tracking-widest">Agility • Mystic</span>
                   </div>
                 </button>
               </div>
@@ -159,25 +175,25 @@ export default function NameWizardSkeuomorphic() {
           {step === 'search' && (
             <motion.div
               key="search"
-              initial={{ x: 100, opacity: 0 }}
+              initial={{ x: 50, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -100, opacity: 0 }}
-              className={`${cardClasses} rounded-[3rem] p-10 border-2`}
+              exit={{ x: -50, opacity: 0 }}
+              className={`${cardClasses} rounded-[4rem] p-12 border`}
             >
-              <div className="flex items-center justify-center gap-3 mb-8">
-                <Target className="text-blue-400 animate-spin" />
-                <h2 className="text-3xl font-black uppercase italic">Scan Target</h2>
+              <div className="flex items-center justify-center gap-4 mb-10">
+                <Target className="text-blue-400 w-8 h-8 animate-pulse" />
+                <h2 className="text-4xl font-black uppercase italic tracking-tighter">Neural Scan</h2>
               </div>
-              <div className="space-y-6">
+              <div className="space-y-8">
                 <div className="relative group">
-                  <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-pink-500 rounded-2xl blur opacity-25 group-focus-within:opacity-75 transition duration-1000"></div>
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-pink-500 rounded-[2rem] blur opacity-20 group-focus-within:opacity-60 transition duration-500"></div>
                   <input
                     type="text"
-                    placeholder="ENTER CODE NAME..."
+                    placeholder="INPUT CODE NAME..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value.toUpperCase())}
                     onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                    className="relative w-full h-20 px-8 text-2xl font-black bg-black rounded-xl border-2 border-white/10 focus:outline-none focus:border-white/40 transition-all uppercase placeholder:opacity-20"
+                    className="relative w-full h-24 px-10 text-3xl font-black bg-black/40 rounded-[2rem] border border-white/10 focus:outline-none focus:border-white/30 transition-all uppercase placeholder:opacity-10 tracking-widest"
                   />
                 </div>
 
@@ -185,15 +201,15 @@ export default function NameWizardSkeuomorphic() {
                   <button
                     onClick={handleSearch}
                     disabled={isSearching || !searchQuery.trim()}
-                    className="flex-1 h-20 bg-white text-black font-black text-xl rounded-xl hover:bg-gray-200 active:scale-95 disabled:opacity-50 transition-all uppercase italic flex items-center justify-center gap-2"
+                    className="flex-1 h-20 bg-white text-black font-black text-2xl rounded-[1.5rem] hover:bg-blue-50 active:scale-95 disabled:opacity-50 transition-all uppercase italic flex items-center justify-center gap-3"
                   >
-                    {isSearching ? <Loader2 className="animate-spin" /> : <><Zap className="w-6 h-6" /> Initialize</>}
+                    {isSearching ? <Loader2 className="animate-spin" /> : <><Zap className="w-6 h-6" /> Execute</>}
                   </button>
                   <button
                     onClick={handleReset}
-                    className="h-20 px-8 bg-white/5 text-white font-black rounded-xl hover:bg-white/10 transition-all uppercase"
+                    className="h-20 px-10 bg-white/5 text-white font-black rounded-[1.5rem] hover:bg-white/10 transition-all uppercase border border-white/10"
                   >
-                    Back
+                    Abort
                   </button>
                 </div>
               </div>
@@ -203,24 +219,24 @@ export default function NameWizardSkeuomorphic() {
           {step === 'results' && (
             <motion.div
               key="results"
-              initial={{ scale: 0.8, opacity: 0 }}
+              initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              className={`${cardClasses} rounded-[3rem] p-8 border-2`}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className={`${cardClasses} rounded-[4rem] p-10 border`}
             >
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-black uppercase italic">Results Decrypted</h2>
-                <div className="h-1 w-20 bg-blue-500 mx-auto mt-2"></div>
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-black uppercase italic tracking-tighter">Decrypted Data</h2>
+                <div className="h-0.5 w-24 bg-gradient-to-r from-transparent via-blue-500 to-transparent mx-auto mt-4"></div>
               </div>
               
-              <div className="grid grid-cols-2 gap-3 max-h-[350px] overflow-y-auto mb-6 pr-2 custom-scrollbar">
+              <div className="grid grid-cols-2 gap-4 max-h-[400px] overflow-y-auto mb-8 pr-2 custom-scrollbar">
                 {results.map((name, idx) => (
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    whileHover={{ scale: 1.03, backgroundColor: 'rgba(255,255,255,0.1)' }}
+                    whileTap={{ scale: 0.97 }}
                     key={idx}
                     onClick={() => handleSelectName(name)}
-                    className="h-14 bg-white/5 hover:bg-white/10 border-2 border-white/5 rounded-lg font-bold text-sm transition-all uppercase tracking-wider"
+                    className="h-16 bg-white/5 border border-white/5 rounded-2xl font-black text-lg transition-all uppercase tracking-tighter italic"
                   >
                     {name}
                   </motion.button>
@@ -229,7 +245,7 @@ export default function NameWizardSkeuomorphic() {
 
               <button
                 onClick={() => setStep('search')}
-                className="w-full h-14 bg-white/5 text-white font-black rounded-lg hover:bg-white/10 transition-all uppercase text-sm border border-white/10"
+                className="w-full h-16 bg-white/5 text-white font-black rounded-2xl hover:bg-white/10 transition-all uppercase text-sm border border-white/10 tracking-[0.3em]"
               >
                 New Scan
               </button>
@@ -239,39 +255,43 @@ export default function NameWizardSkeuomorphic() {
           {step === 'reveal' && selectedName && (
             <motion.div
               key="reveal"
-              initial={{ rotateX: 90, opacity: 0 }}
-              animate={{ rotateX: 0, opacity: 1 }}
-              className={`${cardClasses} rounded-[4rem] p-12 border-4 text-center relative`}
+              initial={{ rotateY: 90, opacity: 0 }}
+              animate={{ rotateY: 0, opacity: 1 }}
+              className={`${cardClasses} rounded-[5rem] p-16 border-2 text-center relative overflow-hidden`}
             >
               <motion.div 
                 animate={{ rotate: 360 }}
-                transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                className="absolute top-10 left-1/2 -translate-x-1/2 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"
+                transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[100px]"
               />
               
               <div className="relative z-10">
-                <div className="w-20 h-20 bg-white/10 rounded-3xl flex items-center justify-center mx-auto mb-8 border-2 border-white/20 rotate-45">
-                  <Sparkles className="w-10 h-10 text-yellow-400 -rotate-45" />
-                </div>
-                <p className="text-sm font-black uppercase tracking-[0.5em] opacity-40 mb-4">Identification Complete</p>
-                <h3 className="text-6xl md:text-8xl font-black italic tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-500 mb-12">
+                <motion.div 
+                  animate={{ y: [0, -10, 0] }}
+                  transition={{ duration: 3, repeat: Infinity }}
+                  className="w-24 h-24 bg-white/5 rounded-[2rem] flex items-center justify-center mx-auto mb-10 border border-white/10 shadow-2xl"
+                >
+                  <Sparkles className="w-12 h-12 text-yellow-400" />
+                </motion.div>
+                <p className="text-xs font-black uppercase tracking-[0.8em] opacity-30 mb-6">Entity Identified</p>
+                <h3 className="text-7xl md:text-9xl font-black italic tracking-tighter bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-gray-600 mb-16 drop-shadow-2xl">
                   {selectedName}
                 </h3>
 
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <button
                     onClick={handleCopyName}
-                    className="w-full h-20 bg-white text-black font-black text-2xl rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-2xl flex items-center justify-center gap-4 italic"
+                    className="w-full h-24 bg-white text-black font-black text-3xl rounded-[2rem] hover:scale-105 active:scale-95 transition-all shadow-[0_20px_60px_rgba(255,255,255,0.2)] flex items-center justify-center gap-4 italic"
                   >
-                    {copied ? <Check /> : <Copy />}
-                    {copied ? 'CAPTURED' : 'CLAIM NAME'}
+                    {copied ? <Check className="w-8 h-8" /> : <Copy className="w-8 h-8" />}
+                    {copied ? 'CAPTURED' : 'CLAIM'}
                   </button>
 
                   <button
                     onClick={handleReset}
-                    className="w-full h-16 bg-transparent border-2 border-white/10 text-white font-black rounded-2xl hover:bg-white/5 transition-all uppercase tracking-widest text-sm"
+                    className="w-full h-16 bg-transparent border border-white/10 text-white font-black rounded-[1.5rem] hover:bg-white/5 transition-all uppercase tracking-[0.5em] text-[10px]"
                   >
-                    Restart Mission
+                    Reset System
                   </button>
                 </div>
               </div>
@@ -283,10 +303,10 @@ export default function NameWizardSkeuomorphic() {
       {/* Footer Branding */}
       <motion.div 
         initial={{ opacity: 0 }}
-        animate={{ opacity: 0.3 }}
-        className="mt-10 font-black tracking-[1em] text-[10px] uppercase"
+        animate={{ opacity: 0.2 }}
+        className="mt-12 font-black tracking-[1.5em] text-[9px] uppercase z-10"
       >
-        Developed by Fahad
+        Core Protocol by Fahad
       </motion.div>
     </div>
   );
